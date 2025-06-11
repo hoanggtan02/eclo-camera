@@ -1,6 +1,6 @@
 <?php
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Tải file đã upload
@@ -20,50 +20,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $DB_PREFIX = htmlspecialchars($_POST['DB_PREFIX']);
     $iconFile = $_FILES['icon'];
     // Kiểm tra tệp upload
-    if ($iconFile['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = '../assest-src/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-        $uploadedFile = $uploadDir . basename($iconFile['name']);
+    // if ($iconFile['error'] === UPLOAD_ERR_OK) {
+        // $uploadDir = '../assest-src/';
+        // if (!is_dir($uploadDir)) {
+        //     mkdir($uploadDir, 0755, true);
+        // }
+        // $uploadedFile = $uploadDir . basename($iconFile['name']);
         
-        $imageInfo = getimagesize($iconFile['tmp_name']);
-        if ($imageInfo[0] > 1024 || $imageInfo[1] > 1024) {
-            die('Hình ảnh phải có kích thước 1024x1024.');
-        }
-        $splashHtml .= '<meta name="mobile-web-app-capable" content="yes" />' . PHP_EOL;
-        $splashHtml .= '<meta name="apple-touch-fullscreen" content="yes" />' . PHP_EOL;
-        $splashHtml .= '<meta name="apple-mobile-web-app-title" content="'.$appName.'" />' . PHP_EOL;
-        $splashHtml .= '<meta name="apple-mobile-web-app-capable" content="yes" />' . PHP_EOL;
-        $splashHtml .= '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />' . PHP_EOL;
-        $splashHtml .= '<meta name="theme-color" media="(prefers-color-scheme: light)" content="'.$themeColor.'" />' . PHP_EOL;
-        $splashHtml .= '<meta name="theme-color" media="(prefers-color-scheme: dark)" content="'.$themeColor.'" />' . PHP_EOL;
+        // $imageInfo = getimagesize($iconFile['tmp_name']);
+        // if ($imageInfo[0] > 1024 || $imageInfo[1] > 1024) {
+        //     die('Hình ảnh phải có kích thước 1024x1024.');
+        // }
+        // $splashHtml .= '<meta name="mobile-web-app-capable" content="yes" />' . PHP_EOL;
+        // $splashHtml .= '<meta name="apple-touch-fullscreen" content="yes" />' . PHP_EOL;
+        // $splashHtml .= '<meta name="apple-mobile-web-app-title" content="'.$appName.'" />' . PHP_EOL;
+        // $splashHtml .= '<meta name="apple-mobile-web-app-capable" content="yes" />' . PHP_EOL;
+        // $splashHtml .= '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />' . PHP_EOL;
+        // $splashHtml .= '<meta name="theme-color" media="(prefers-color-scheme: light)" content="'.$themeColor.'" />' . PHP_EOL;
+        // $splashHtml .= '<meta name="theme-color" media="(prefers-color-scheme: dark)" content="'.$themeColor.'" />' . PHP_EOL;
         // Di chuyển file đã upload và xử lý các kích thước khác
-        if (move_uploaded_file($iconFile['tmp_name'], $uploadedFile)) {
-            $sizes = [128, 144, 152, 192, 256, 512];
-            $iconPaths = [];
-            $splashHtml .= '<link rel="icon" type="image/png" href="/assest-src/512x512.png"/>' . PHP_EOL;
-            foreach ($sizes as $size) {
-                $resizedFile = $uploadDir . "{$size}x{$size}.png";
-                $iconPaths[] = ["src" => "/assest-src/{$size}x{$size}.png", "sizes" => "{$size}x{$size}", "type" => "image/png"];
+        // if (move_uploaded_file($iconFile['tmp_name'], $uploadedFile)) {
+            // $sizes = [128, 144, 152, 192, 256, 512];
+            // $iconPaths = [];
+            // $splashHtml .= '<link rel="icon" type="image/png" href="/assest-src/512x512.png"/>' . PHP_EOL;
+            // foreach ($sizes as $size) {
+            //     $resizedFile = $uploadDir . "{$size}x{$size}.png";
+            //     $iconPaths[] = ["src" => "/assest-src/{$size}x{$size}.png", "sizes" => "{$size}x{$size}", "type" => "image/png"];
 
-                // Tạo ảnh đã resize
-                $srcImage = imagecreatefrompng($uploadedFile);
-                $dstImage = imagecreatetruecolor($size, $size);
+            //     // Tạo ảnh đã resize
+            //     $srcImage = imagecreatefrompng($uploadedFile);
+            //     $dstImage = imagecreatetruecolor($size, $size);
 
-                // Giữ nền trong suốt (với hình ảnh PNG)
-                imagesavealpha($dstImage, true);
-                $transparent = imagecolorallocatealpha($dstImage, 0, 0, 0, 127); // Nền trong suốt
-                imagefill($dstImage, 0, 0, $transparent);
+            //     // Giữ nền trong suốt (với hình ảnh PNG)
+            //     imagesavealpha($dstImage, true);
+            //     $transparent = imagecolorallocatealpha($dstImage, 0, 0, 0, 127); // Nền trong suốt
+            //     imagefill($dstImage, 0, 0, $transparent);
 
-                // Resize ảnh
-                imagecopyresampled($dstImage, $srcImage, 0, 0, 0, 0, $size, $size, $imageInfo[0], $imageInfo[1]);
+            //     // Resize ảnh
+            //     imagecopyresampled($dstImage, $srcImage, 0, 0, 0, 0, $size, $size, $imageInfo[0], $imageInfo[1]);
 
-                imagepng($dstImage, $resizedFile);
-                imagedestroy($dstImage);
-                $splashHtml .= '<link rel="apple-touch-icon" sizes="'.$size.'x'.$size.'" href="/assest-src/'.$size.'x'.$size.'.png">' . PHP_EOL;
-            }
-            imagedestroy($srcImage);
+            //     imagepng($dstImage, $resizedFile);
+            //     imagedestroy($dstImage);
+            //     $splashHtml .= '<link rel="apple-touch-icon" sizes="'.$size.'x'.$size.'" href="/assest-src/'.$size.'x'.$size.'.png">' . PHP_EOL;
+            // }
+            // imagedestroy($srcImage);
 
             // Tạo file manifest.json
             $manifest = [
@@ -126,67 +126,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]
             ];
             // Hàm chuyển đổi mã màu hex thành RGB
-            function hexToRgb($hex) {
-                $hex = ltrim($hex, '#');
-                $length = strlen($hex);
+            // function hexToRgb($hex) {
+            //     $hex = ltrim($hex, '#');
+            //     $length = strlen($hex);
 
-                if ($length == 3) {
-                    $r = hexdec($hex[0] . $hex[0]);
-                    $g = hexdec($hex[1] . $hex[1]);
-                    $b = hexdec($hex[2] . $hex[2]);
-                } elseif ($length == 6) {
-                    $r = hexdec($hex[0] . $hex[1]);
-                    $g = hexdec($hex[2] . $hex[3]);
-                    $b = hexdec($hex[4] . $hex[5]);
-                } else {
-                    return null; // Mã hex không hợp lệ
-                }
+            //     if ($length == 3) {
+            //         $r = hexdec($hex[0] . $hex[0]);
+            //         $g = hexdec($hex[1] . $hex[1]);
+            //         $b = hexdec($hex[2] . $hex[2]);
+            //     } elseif ($length == 6) {
+            //         $r = hexdec($hex[0] . $hex[1]);
+            //         $g = hexdec($hex[2] . $hex[3]);
+            //         $b = hexdec($hex[4] . $hex[5]);
+            //     } else {
+            //         return null; // Mã hex không hợp lệ
+            //     }
 
-                return ['r' => $r, 'g' => $g, 'b' => $b];
-            }
+            //     return ['r' => $r, 'g' => $g, 'b' => $b];
+            // }
 
             // Tạo các file splash screen cho Android và iOS
-            foreach (['android', 'ios'] as $platform) {
-                foreach ($splashScreens[$platform] as $size) {
-                    $splashFile = $uploadDir . "{$platform}_splash_{$size}.png";
+            // foreach (['android', 'ios'] as $platform) {
+            //     foreach ($splashScreens[$platform] as $size) {
+            //         $splashFile = $uploadDir . "{$platform}_splash_{$size}.png";
                     
-                    // Phân tách kích thước của splash screen
-                    list($width, $height) = explode('x', $size);
+            //         // Phân tách kích thước của splash screen
+            //         list($width, $height) = explode('x', $size);
 
-                    // Tạo ảnh splash mới với nền màu theo backgroundColor
-                    $dstSplash = imagecreatetruecolor($width, $height);
-                    imagesavealpha($dstSplash, true);
-                    $bgColor = hexToRgb($backgroundColor); // Chuyển hex thành RGB
-                    $background = imagecolorallocate($dstSplash, $bgColor['r'], $bgColor['g'], $bgColor['b']);
-                    imagefill($dstSplash, 0, 0, $background);
+            //         // Tạo ảnh splash mới với nền màu theo backgroundColor
+            //         $dstSplash = imagecreatetruecolor($width, $height);
+            //         imagesavealpha($dstSplash, true);
+            //         $bgColor = hexToRgb($backgroundColor); // Chuyển hex thành RGB
+            //         $background = imagecolorallocate($dstSplash, $bgColor['r'], $bgColor['g'], $bgColor['b']);
+            //         imagefill($dstSplash, 0, 0, $background);
 
-                    // Resize icon để giữ nguyên tỷ lệ
-                    $icon = imagecreatefrompng($uploadedFile);
-                    list($iconWidth, $iconHeight) = getimagesize($uploadedFile);
+            //         // Resize icon để giữ nguyên tỷ lệ
+            //         $icon = imagecreatefrompng($uploadedFile);
+            //         list($iconWidth, $iconHeight) = getimagesize($uploadedFile);
 
-                    // Giảm kích thước icon xuống 50% so với kích thước splash screen mà vẫn giữ tỷ lệ
-                    $scaleFactor = min($width, $height) * 0.5 / max($iconWidth, $iconHeight); // Tính tỷ lệ thu nhỏ
-                    $newIconWidth = $iconWidth * $scaleFactor;
-                    $newIconHeight = $iconHeight * $scaleFactor;
+            //         // Giảm kích thước icon xuống 50% so với kích thước splash screen mà vẫn giữ tỷ lệ
+            //         $scaleFactor = min($width, $height) * 0.5 / max($iconWidth, $iconHeight); // Tính tỷ lệ thu nhỏ
+            //         $newIconWidth = $iconWidth * $scaleFactor;
+            //         $newIconHeight = $iconHeight * $scaleFactor;
 
-                    // Tạo ảnh icon đã thay đổi kích thước
-                    $iconResized = imagescale($icon, $newIconWidth, $newIconHeight);
+            //         // Tạo ảnh icon đã thay đổi kích thước
+            //         $iconResized = imagescale($icon, $newIconWidth, $newIconHeight);
 
-                    // Tính toán vị trí căn giữa của icon
-                    $x = ($width - $newIconWidth) / 2;
-                    $y = ($height - $newIconHeight) / 2;
+            //         // Tính toán vị trí căn giữa của icon
+            //         $x = ($width - $newIconWidth) / 2;
+            //         $y = ($height - $newIconHeight) / 2;
 
-                    // Vẽ icon vào splash screen
-                    imagecopy($dstSplash, $iconResized, $x, $y, 0, 0, $newIconWidth, $newIconHeight);
+            //         // Vẽ icon vào splash screen
+            //         imagecopy($dstSplash, $iconResized, $x, $y, 0, 0, $newIconWidth, $newIconHeight);
 
-                    // Lưu splash screen
-                    imagepng($dstSplash, $splashFile);
-                    imagedestroy($dstSplash);
-                    imagedestroy($iconResized);
-                    $splashHtml .= '<link rel="apple-touch-startup-image" media="screen and (device-width: ' . $width . 'px) and (device-height: ' . $height . 'px)" href="/assest-src/' . basename($splashFile) . '">' . PHP_EOL;
+            //         // Lưu splash screen
+            //         imagepng($dstSplash, $splashFile);
+            //         imagedestroy($dstSplash);
+            //         imagedestroy($iconResized);
+            //         $splashHtml .= '<link rel="apple-touch-startup-image" media="screen and (device-width: ' . $width . 'px) and (device-height: ' . $height . 'px)" href="/assest-src/' . basename($splashFile) . '">' . PHP_EOL;
 
-                }
-            }
+            //     }
+            // }
             // Xuất HTML kết quả dễ copy vào
             $htmlResult = "<html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Generated Manifest and Splash Screens</title></head><body>";
             $htmlResult .= "<h1>Manifest and Splash Screens Created Successfully</h1>";
@@ -204,12 +204,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo $htmlResult;
             file_put_contents($uploadDir.'assest-src.txt', $splashHtml);
 
-        } else {
-            echo "Không thể tải file.";
-        }
-    } else {
-        echo "Lỗi upload: " . $iconFile['error'];
-    }
+        // } else {
+        //     echo "Không thể tải file.";
+        // }
+    // } else {
+    //     echo "Lỗi upload: " . $iconFile['error'];
+    // }
 } else {
 ?>
 <!doctype html>
@@ -250,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="mb-2">
                         <label>Upload Icon (1024x1024):</label>
-                        <input type="file" name="icon" required class="form-control rounded-3 py-3">
+                        <input type="file" name="icon"  class="form-control rounded-3 py-3">
                     </div>
                     <div class="mb-2">
                         <label>Database Type:</label>
@@ -274,7 +274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="mb-2">
                         <label>Database Password:</label>
-                        <input type="text" name="DB_PASSWORD" required class="form-control rounded-3 py-3" value="">
+                        <input type="text" name="DB_PASSWORD"  class="form-control rounded-3 py-3" value="">
                     </div>
                     <div class="mb-2">
                         <label>Database Charset:</label>

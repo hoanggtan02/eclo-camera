@@ -85,6 +85,22 @@
                         'trash'          =>$jatbi->lang("Thùng rác"),
                     ]
                 ],
+                'camera'=>[
+                    "menu"=>$jatbi->lang("Danh sách nhận diện"),
+                    "url"=>'/camera',
+                    "icon"=>'<i class="ti ti-user "></i>',
+                    "controllers"=>"controllers/core/camera.php",
+                    "main"=>'false',
+                    "permission"=>[
+                        'camera'       =>$jatbi->lang("Camera"),
+                        // 'blockip.add'   =>$jatbi->lang("Thêm Chặn truy cập"),
+                        // 'blockip.edit'  =>$jatbi->lang("Sửa Chặn truy cập"),
+                        // 'blockip.deleted'=>$jatbi->lang("Xóa Chặn truy cập"),
+                        // 'config'        =>$jatbi->lang("Cấu hình"),
+                        // 'logs'          =>$jatbi->lang("Nhật ký"),
+                        // 'trash'          =>$jatbi->lang("Thùng rác"),
+                    ]
+                ],
             ],
         ],
     ];
