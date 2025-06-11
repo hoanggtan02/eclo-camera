@@ -89,7 +89,7 @@
                     "menu"=>$jatbi->lang("Danh sách nhận diện"),
                     "url"=>'/camera',
                     "icon"=>'<i class="ti ti-user "></i>',
-                    "controllers"=>"controllers/core/camera.php",
+                    "controllers"=>"controllers/core/mqtt_listener.php",
                     "main"=>'false',
                     "permission"=>[
                         'camera'       =>$jatbi->lang("Camera"),
