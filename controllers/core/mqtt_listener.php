@@ -1,57 +1,79 @@
 <?php
-require 'vendor/autoload.php';
+// File: controllers/core/mqtt_listener.php
+// PHIÊN BẢN ĐỘC LẬP - ĐÃ SỬA LỖI ĐƯỜNG DẪN .ENV
+
+// --- Bước 1: Nạp thư viện Composer ---
+require __DIR__ . '/../../vendor/autoload.php';
 
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 
-// --- Các thông tin kết nối ---
-$server   = 'mqtt.ellm.io';
-$port     = 1883;
-$username = 'eclo';
-$password = 'Eclo@123';
+// --- Bước 2: Tự đọc file .env một cách đơn giản ---
+// Sửa lại đường dẫn này cho đúng
+$envPath = __DIR__ . '/../../.env'; 
+if (!file_exists($envPath)) {
+    die("File .env không được tìm thấy tại: $envPath");
+}
+$env = parse_ini_file($envPath);
+
+// --- Bước 3: Đọc cấu hình và tự kết nối Database ---
+$db_host = $env['DB_HOST'] ?? 'localhost';
+$db_name = $env['DB_DATABASE'] ?? 'eclo-camera';
+$db_user = $env['DB_USERNAME'] ?? 'root';
+$db_pass = $env['DB_PASSWORD'] ?? '';
+$db_charset = $env['DB_CHARSET'] ?? 'utf8mb4';
+
+try {
+    $dsn = "mysql:host=$db_host;dbname=$db_name;charset=$db_charset";
+    $pdo = new PDO($dsn, $db_user, $db_pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Không thể kết nối đến database: " . $e->getMessage());
+}
+echo "Da ket noi Database thanh cong.\n";
+
+
+// --- Bước 4: Đọc cấu hình MQTT từ .env và chạy listener ---
+$server   = $env['MQTT_HOST'] ?? 'mqtt.eclo.io';
+$port     = (int)($env['MQTT_PORT'] ?? 1883);
+$clientId = 'eclo-listener-' . uniqid();
+$username = $env['MQTT_USERNAME'] ?? 'eclo';
+$password = $env['MQTT_PASSWORD'] ?? '';
 $topic    = 'mqtt/face/1018656/Rec';
 
-// --- THAY ĐỔI QUAN TRỌNG: Tạo Client ID ngẫu nhiên để tránh xung đột ---
-$clientId = 'php-mqtt-client-' . uniqid();
-
-// --- Bắt đầu kết nối ---
 $mqtt = new MqttClient($server, $port, $clientId);
-
 $connectionSettings = (new ConnectionSettings)
     ->setUsername($username)
-    ->setPassword($password)
-    ->setKeepAliveInterval(60);
+    ->setPassword($password);
 
 try {
     $mqtt->connect($connectionSettings, true);
-    echo "Connected to broker with Client ID: $clientId at " . date('Y-m-d H:i:s') . "!\n";
+    echo "Da ket noi MQTT Broker thanh cong. Dang lang nghe tren topic: $topic\n";
 
-    $mqtt->subscribe($topic, function ($topic, $message) {
-        echo sprintf(
-            "Received message on topic [%s]: %s at %s\n",
-            $topic,
-            $message,
-            date('Y-m-d H:i:s')
-        );
-    }, MqttClient::QOS_AT_LEAST_ONCE);
-    
-    echo "Subscribed to topic [$topic]. Waiting for messages...\n";
+    $mqtt->subscribe($topic, function ($topic, $message) use ($pdo) {
+        echo "Nhan duoc tin nhan: " . date('Y-m-d H:i:s') . "\n";
+        
+        $payload = json_decode($message, true);
 
-    // Chạy trong 5 phút (300 giây) để có đủ thời gian nhận dữ liệu
-    $startTime = time();
-    while ($mqtt->isConnected() && (time() - $startTime) < 300) { 
-        $mqtt->loop();
-        // Không cần echo liên tục trong vòng lặp để tránh rối console
-        usleep(100000); // Đợi 0.1 giây
-    }
+        if (isset($payload['info'])) {
+            $info = $payload['info'];
 
-    echo "Stopped listening after 5 minutes at " . date('Y-m-d H:i:s') . "\n";
+            $stmt = $pdo->prepare(
+                "INSERT INTO mqtt_messages (person_name, person_id, similarity) VALUES (:name, :pid, :sim)"
+            );
+            
+            $stmt->execute([
+                ':name' => $info['persionName'],
+                ':pid'  => $info['personId'],
+                ':sim'  => (float)$info['similarity1']
+            ]);
+
+            echo "Da luu du lieu cua '{$info['persionName']}' vao database.\n";
+        }
+    }, 0);
+
+    $mqtt->loop(true);
 
 } catch (Exception $e) {
-    echo "Connection failed: " . $e->getMessage() . " at " . date('Y-m-d H:i:s') . "\n";
-} finally {
-    if ($mqtt->isConnected()) {
-        $mqtt->disconnect();
-        echo "Disconnected from broker at " . date('Y-m-d H:i:s') . "\n";
-    }
+    die("Loi MQTT: " . $e->getMessage());
 }

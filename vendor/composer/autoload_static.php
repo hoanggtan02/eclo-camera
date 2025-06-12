@@ -16,6 +16,7 @@ class ComposerStaticInit8c9e68cd509aade1b77a7aed02532c32
         'b6b991a57620e2fb6b2f66f03fe9ddc2' => __DIR__ . '/..' . '/symfony/string/Resources/functions.php',
         '3109cb1a231dcd04bee1f9f620d46975' => __DIR__ . '/..' . '/paragonie/sodium_compat/autoload.php',
         '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
+        '100b0519bb5d021f6352b0077e8ac28a' => __DIR__ . '/..' . '/simps/mqtt/src/constants.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -31,6 +32,7 @@ class ComposerStaticInit8c9e68cd509aade1b77a7aed02532c32
             'Symfony\\Component\\HttpClient\\' => 29,
             'Symfony\\Component\\Console\\' => 26,
             'SpomkyLabs\\Pki\\' => 15,
+            'Simps\\MQTT\\' => 11,
         ),
         'P' => 
         array (
@@ -117,6 +119,10 @@ class ComposerStaticInit8c9e68cd509aade1b77a7aed02532c32
         'SpomkyLabs\\Pki\\' => 
         array (
             0 => __DIR__ . '/..' . '/spomky-labs/pki-framework/src',
+        ),
+        'Simps\\MQTT\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/simps/mqtt/src',
         ),
         'Psr\\Log\\' => 
         array (
