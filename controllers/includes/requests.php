@@ -89,16 +89,34 @@
                     "menu"=>$jatbi->lang("Danh sách nhận diện"),
                     "url"=>'/camera',
                     "icon"=>'<i class="ti ti-user "></i>',
-                    "controllers"=>"controllers/core/mqtt_listener.php",
+                    "sub"=>[
+                        'rec'   => [
+                            "name"  => $jatbi->lang("Nhân viên"),
+                            "router"    => '/camera/rec',
+                            "icon"  => '<i class="fas fa-ban"></i>',
+                        ],
+                        'snap'  => [
+                            "name"  => $jatbi->lang("Người lạ"),
+                            "router"    => '/camera/snap',
+                            "icon"  => '<i class="fa fa-list-alt"></i>',
+                        ]
+                    ],
+                    "controllers"=>"controllers/core/camera.php",
                     "main"=>'false',
                     "permission"=>[
                         'camera'       =>$jatbi->lang("Camera"),
-                        // 'blockip.add'   =>$jatbi->lang("Thêm Chặn truy cập"),
-                        // 'blockip.edit'  =>$jatbi->lang("Sửa Chặn truy cập"),
-                        // 'blockip.deleted'=>$jatbi->lang("Xóa Chặn truy cập"),
-                        // 'config'        =>$jatbi->lang("Cấu hình"),
-                        // 'logs'          =>$jatbi->lang("Nhật ký"),
-                        // 'trash'          =>$jatbi->lang("Thùng rác"),
+                        'rec'       =>$jatbi->lang("Danh sách nhận diện nhân viên"),
+                        'snap'       =>$jatbi->lang("Danh sách nhận diện người lạ"),
+                    ]
+                ],
+                'employee'=>[
+                    "menu"=>$jatbi->lang("Nhân viên"),
+                    "url"=>'/employee',
+                    "icon"=>'<i class="ti ti-user "></i>',
+                    "controllers"=>"controllers/core/employee.php",
+                    "main"=>'false',
+                    "permission"=>[
+                        'employee'       =>$jatbi->lang("Nhân viên"),
                     ]
                 ],
             ],

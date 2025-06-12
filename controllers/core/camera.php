@@ -1,95 +1,158 @@
 <?php
 if (!defined('ECLO')) die("Hacking attempt");
 
-// Giả sử $app và $jatbi đã được khởi tạo từ file bootstrap của framework
 $jatbi = new Jatbi($app);
-$setting = $app->getValueData('setting'); // Lấy cài đặt chung, bao gồm cả cài đặt MQTT
+$setting = $app->getValueData('setting');
 
-// Route để hiển thị trang HTML
-$app->router("/camera", 'GET', function($vars) use ($app) {
-    echo $app->render('templates/camera/camera.html', $vars);
-})->setPermissions(['camera']);
+// --- ROUTE CHO DỮ LIỆU NHẬN DIỆN (REC) ---
 
-// Route để cung cấp dữ liệu JSON cho DataTable
-$app->router("/camera", 'POST', function($vars) use ($app, $jatbi) {
+$app->router("/camera/rec", 'GET', function($vars) use ($app, $jatbi, $setting) {
+    $vars['title'] = $jatbi->lang('Dữ liệu nhận diện');
+    echo $app->render('templates/camera/rec.html', $vars);
+})->setPermissions(['rec']);
+
+$app->router("/camera/rec", 'POST', function($vars) use ($app, $jatbi) {
     $app->header(['Content-Type' => 'application/json']);
 
-    // Nhận dữ liệu từ DataTable
     $draw = $_POST['draw'] ?? 0;
     $start = $_POST['start'] ?? 0;
     $length = $_POST['length'] ?? 10;
     $searchValue = $_POST['search']['value'] ?? '';
-    $type = $_POST['type'] ?? '';
-
-    // Fix lỗi ORDER cột
-    $orderColumnIndex = $_POST['order'][0]['column'] ?? 1; // Mặc định cột SN
+    $dateFrom = $_POST['date_from'] ?? '';
+    $dateTo = $_POST['date_to'] ?? '';
+    $personType = $_POST['person_type'] ?? '';
+    $orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
     $orderDir = strtoupper($_POST['order'][0]['dir'] ?? 'DESC');
-    
-    $validColumns = ["checkbox", "sn", "name", "type", "department"];
-    $orderColumn = $validColumns[$orderColumnIndex] ?? "sn";
+    $validColumns = ["id", "image_path", "person_name", "person_id", "similarity", "event_time", "person_type", "is_no_mask"];
+    $orderColumn = $validColumns[$orderColumnIndex] ?? "id";
 
-    // Điều kiện lọc dữ liệu
+    // --- THÊM ĐIỀU KIỆN LỌC CỐ ĐỊNH CHO 'Rec' ---
+    $conditions = [
+        'event_type' => 'Rec' 
+    ]; 
+
+    if (!empty($searchValue)) {
+        $conditions["OR"] = [
+            "person_name[~]" => $searchValue,
+            "person_id[~]" => $searchValue
+        ];
+    }
+
+    if (!empty($dateFrom) && !empty($dateTo)) {
+        $conditions["event_time[<>]"] = [$dateFrom . " 00:00:00", $dateTo . " 23:59:59"];
+    }
+
+    if ($personType !== '') {
+        $conditions["person_type"] = $personType;
+    }
+
     $where = [
-        "AND" => [
-            "OR" => [
-                "employee.sn[~]" => $searchValue,
-                "employee.name[~]" => $searchValue,
-            ]
-        ],
         "LIMIT" => [$start, $length],
         "ORDER" => [$orderColumn => $orderDir]
     ];
-
-    if (!empty($type)) {
-        $where["AND"]["employee.type"] = $type;
+    
+    if (!empty($conditions)) {
+        $where["AND"] = $conditions;
     }
 
-    // Đếm tổng số bản ghi phù hợp điều kiện
-    $count = $app->count("employee", ["AND" => $where["AND"]]);
-
-    // Truy vấn danh sách nhân viên từ CSDL
-    $datas = $app->select("employee", [
-        "[>]department" => ["departmentId" => "departmentId"]
-    ], [
-        "department.personName",
-        "employee.sn",
-        "employee.name",
-        "employee.type",
-        "employee.status",
-    ], $where) ?? [];
-
-    // Xử lý dữ liệu để hiển thị
+    $totalRecords = $app->count("mqtt_messages", ['event_type' => 'Rec']);
+    $filteredRecords = $app->count("mqtt_messages", !empty($conditions) ? ["AND" => $conditions] : []);
+    $datas = $app->select("mqtt_messages", "*", $where) ?? [];
+    
+    // Phần định dạng dữ liệu giữ nguyên...
     $formattedData = array_map(function($data) use ($app, $jatbi) {
-        $typeLabels = [
-            "1" => $jatbi->lang("Nhân viên nội bộ"),
-            "2" => $jatbi->lang("Khách"),
-            "3" => $jatbi->lang("Danh sách đen"),
+        $personTypes = [
+            "0" => $jatbi->lang("Nhân viên"), 
+            "1" => $jatbi->lang("Người lạ"),
         ];
+        $imageHtml = $data['image_path']
+            ? '<img src="/public/' . $data['image_path'] . '" alt="Face" class="img-thumbnail" style="width: 60px; height: auto;">'
+            : $jatbi->lang('Không có ảnh');
 
         return [
-            "checkbox" => $app->component("box", ["data" => $data['sn']]),
-            "sn" => $data['sn'],
-            "name" => $data['name'],
-            "type" => $typeLabels[$data['type']] ?? $jatbi->lang("Không xác định"),
-            "department" => $data['personName'],
-            "status" => $app->component("status", ["url" => "/employee-status/" . $data['sn'], "data" => $data['status'], "permission" => ['employee.edit']]),
-            "action" => $app->component("action", [
-                "button" => [
-                    // Các nút action... (giữ nguyên)
-                ]
-            ]),
-            "view" => '<a href="/manager/employee-detail?box=' . $data['sn'] . '" title="' . $jatbi->lang("Xem Chi Tiết") . '"><i class="ti ti-eye"></i></a>',
+            "id" => $data['id'],
+            "image_path" => $imageHtml,
+            "person_name" => $data['person_name'],
+            "person_id" => $data['person_id'],
+            "similarity" => number_format($data['similarity'], 2) . '%',
+            "event_time" => date('H:i:s d/m/Y', strtotime($data['event_time'])),
+            "person_type" => $personTypes[$data['person_type']] ?? $jatbi->lang("Không xác định"),
+            "is_no_mask" => $data['is_no_mask'] ? '<span class="badge bg-danger">' . $jatbi->lang("Không khẩu trang") . '</span>' : '<span class="badge bg-success">' . $jatbi->lang("Có khẩu trang") . '</span>',        
         ];
     }, $datas);
 
-    // Trả về dữ liệu JSON cho DataTable
     echo json_encode([
         "draw" => intval($draw),
-        "recordsTotal" => $count,
-        "recordsFiltered" => $count,
+        "recordsTotal" => $totalRecords,
+        "recordsFiltered" => $filteredRecords,
         "data" => $formattedData
     ]);
-})->setPermissions(['camera']);
+})->setPermissions(['rec']);
 
-// KHÔNG CÓ BẤT KỲ MÃ MQTT NÀO Ở ĐÂY
-?>
+
+// --- ROUTE CHO ẢNH CHỤP NHANH (SNAP) ---
+
+$app->router("/camera/snap", 'GET', function($vars) use ($app, $jatbi, $setting) {
+    $vars['title'] = $jatbi->lang('Dữ liệu ảnh chụp nhanh');
+    echo $app->render('templates/camera/snap.html', $vars);
+})->setPermissions(['snap']);
+    
+$app->router("/camera/snap", 'POST', function($vars) use ($app, $jatbi) {
+    $app->header(['Content-Type' => 'application/json']);
+
+    $draw = $_POST['draw'] ?? 0;
+    $start = $_POST['start'] ?? 0;
+    $length = $_POST['length'] ?? 10;
+    $searchValue = $_POST['search']['value'] ?? '';
+    $dateFrom = $_POST['date_from'] ?? '';
+    $dateTo = $_POST['date_to'] ?? '';
+    // Bỏ personType vì snap không có
+    $orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
+    $orderDir = strtoupper($_POST['order'][0]['dir'] ?? 'DESC');
+    $validColumns = ["id", "image_path", "record_id", "event_time", "is_no_mask"];
+    $orderColumn = $validColumns[$orderColumnIndex] ?? "id";
+    
+    // --- THÊM ĐIỀU KIỆN LỌC CỐ ĐỊNH CHO 'Snap' ---
+    $conditions = [
+        'event_type' => 'Snap'
+    ]; 
+
+    if (!empty($dateFrom) && !empty($dateTo)) {
+        $conditions["event_time[<>]"] = [$dateFrom . " 00:00:00", $dateTo . " 23:59:59"];
+    }
+
+    $where = [
+        "LIMIT" => [$start, $length],
+        "ORDER" => [$orderColumn => $orderDir]
+    ];
+    
+    if (!empty($conditions)) {
+        $where["AND"] = $conditions;
+    }
+
+    $totalRecords = $app->count("mqtt_messages", ['event_type' => 'Snap']);
+    $filteredRecords = $app->count("mqtt_messages", !empty($conditions) ? ["AND" => $conditions] : []);
+    $datas = $app->select("mqtt_messages", "*", $where) ?? [];
+    
+    // Định dạng dữ liệu chỉ cho Snap
+    $formattedData = array_map(function($data) use ($app, $jatbi) {
+        $imageHtml = $data['image_path']
+            ? '<img src="/public/' . $data['image_path'] . '" alt="Face" class="img-thumbnail" style="width: 60px; height: auto;">'
+            : $jatbi->lang('Không có ảnh');
+
+        return [
+            "id" => $data['id'],
+            "image_path" => $imageHtml,
+            "record_id" => $data['record_id'],
+            "event_time" => date('H:i:s d/m/Y', strtotime($data['event_time'])),
+            "is_no_mask" => $data['is_no_mask'] ? '<span class="badge bg-danger">' . $jatbi->lang("Không khẩu trang") . '</span>' : '<span class="badge bg-success">' . $jatbi->lang("Có khẩu trang") . '</span>',        
+        ];
+    }, $datas);
+
+    echo json_encode([
+        "draw" => intval($draw),
+        "recordsTotal" => $totalRecords,
+        "recordsFiltered" => $filteredRecords,
+        "data" => $formattedData
+    ]);
+})->setPermissions(['snap']);
