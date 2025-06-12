@@ -65,38 +65,100 @@ $app->router("/employee", 'POST', function($vars) use ($app, $jatbi) {
 
 $app->router("/employee-add", 'GET', function($vars) use ($app, $jatbi) {
     $vars['title'] = $jatbi->lang('Thêm nhân viên');
-    echo $app->render('templates/camera/employee-post.html', $vars); 
+    echo $app->render('templates/camera/employee-post.html', $vars, 'global');
 })->setPermissions(['employee']);
 
 
 $app->router("/employee-add", 'POST', function($vars) use ($app, $jatbi) {
-    // Lấy dữ liệu từ form
-    $sn = $_POST['sn'] ?? '';
-    $person_name = $_POST['person_name'] ?? '';
-    // ... lấy các trường khác ...
+    $app->header(['Content-Type' => 'application/json']);
 
-    // Kiểm tra dữ liệu (validation)
-    if (empty($sn) || empty($person_name)) {
-        $app->json(['status' => 'error', 'content' => $jatbi->lang('Vui lòng nhập đầy đủ thông tin bắt buộc.')]);
+    // --- Bước 1: Lấy dữ liệu từ form ---
+    $sn = $_POST['sn'] ?? '';
+    $person_name = trim($_POST['person_name'] ?? '');
+    $telephone = $_POST['telephone'] ?? null;
+    $gender = $_POST['gender'] ?? null;
+    $birthday = $_POST['birthday'] ?? null;
+    $id_card = $_POST['id_card'] ?? null;
+    $address = $_POST['address'] ?? null;
+
+    // --- Bước 2: Kiểm tra dữ liệu (Validation) ---
+    
+    // 2.1. Kiểm tra tên nhân viên có được nhập hay không
+    if (empty($person_name)) {
+        $app->json(['status' => 'error', 'content' => $jatbi->lang('Vui lòng nhập họ và tên nhân viên.')]);
+        return; // Dừng thực thi
     }
 
-    // Thêm vào database
-    $app->insert("employee", [
-        "sn" => $sn,
-        "person_name" => $person_name,
-        // ... các trường khác ...
-    ]);
+    // 2.2. Kiểm tra ảnh có được tải lên không
+    if (!isset($_FILES['registration_photo']) || $_FILES['registration_photo']['error'] !== UPLOAD_ERR_OK) {
+        $app->json(['status' => 'error', 'content' => $jatbi->lang('Vui lòng chọn ảnh đăng ký cho nhân viên.')]);
+        return;
+    }
 
-    // Trả về thông báo thành công
-    $app->json(['status' => 'success', 'content' => $jatbi->lang('Thêm nhân viên thành công.'), 'load' => 'this']);
-})->setPermissions(['employee']);
+    // 2.3. Kiểm tra kích thước file ảnh (phải nhỏ hơn 300KB)
+    $max_size_kb = 300;
+    if ($_FILES['registration_photo']['size'] > ($max_size_kb * 1024)) {
+        $app->json(['status' => 'error', 'content' => $jatbi->lang('Kích thước ảnh không được vượt quá ' . $max_size_kb . 'KB.')]);
+        return;
+    }
+    
+    // 2.4. (Nên có) Kiểm tra định dạng file ảnh
+    $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+    $file_type = mime_content_type($_FILES['registration_photo']['tmp_name']);
+    if (!in_array($file_type, $allowed_types)) {
+        $app->json(['status' => 'error', 'content' => $jatbi->lang('Định dạng ảnh không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF.')]);
+        return;
+    }
 
+    // --- Bước 3: Xử lý Mã nhân viên (SN) ---
+    // Nếu SN trống, tự động tạo một mã mới
+    if (empty($sn)) {
+        $sn = 'NV' . time(); // Ví dụ: NV1749708637
+    }
+    // Kiểm tra xem SN đã tồn tại trong database chưa
+    if ($app->has("employee", ["sn" => $sn])) {
+        $app->json(['status' => 'error', 'content' => $jatbi->lang('Mã nhân viên này đã tồn tại. Vui lòng chọn một mã khác.')]);
+        return;
+    }
 
-$app->router("/employee-delete", 'GET', function($vars) use ($app, $jatbi) {
-    $vars['title'] = $jatbi->lang('Xóa nhân viên');
-    $vars['list'] = explode(',', $_GET['box'] ?? '');
-    echo $app->render('templates/employee/delete.html', $vars); 
-})->setPermissions(['employee']);
+    // --- Bước 4: Xử lý tải file ảnh lên ---
+    $uploadDir = __DIR__ . '/../../public/uploads/photos/';
+    // Tạo thư mục nếu nó chưa tồn tại
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+    
+    // Tạo tên file mới, duy nhất để tránh trùng lặp
+    $fileExtension = pathinfo($_FILES['registration_photo']['name'], PATHINFO_EXTENSION);
+    $newFileName = $sn . '_' . uniqid() . '.' . strtolower($fileExtension);
+    $uploadFilePath = $uploadDir . $newFileName;
+    
+    // Đường dẫn để lưu vào database
+    $dbImagePath = 'uploads/photos/' . $newFileName; 
+
+    // Di chuyển file đã tải lên vào thư mục chỉ định
+    if (!move_uploaded_file($_FILES['registration_photo']['tmp_name'], $uploadFilePath)) {
+        $app->json(['status' => 'error', 'content' => $jatbi->lang('Đã có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.')]);
+        return;
+    }
+
+    try {
+    // --- Bước 5: Thêm vào database ---
+        $app->insert("employee", [
+            "sn" => $sn,
+            "person_name" => $person_name,
+            "registration_photo" => $dbImagePath, // Lưu đường dẫn tương đối của ảnh
+            "telephone" => $telephone,
+            "gender" => $gender,
+            "birthday" => empty($birthday) ? null : $birthday,
+            "id_card" => $id_card,
+            "address" => $address,
+    ]);        
+        echo json_encode(["status" => "success", "content" => $jatbi->lang("Thêm thành công")]);
+    } catch (Exception $e) {
+        echo json_encode(["status" => "error", "content" => "Lỗi: " . $e->getMessage()]);
+    }
+})->setPermissions(['employee']); 
 
 
 $app->router("/employee-delete", 'POST', function($vars) use ($app, $jatbi) {
