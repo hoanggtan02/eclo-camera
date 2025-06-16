@@ -3,6 +3,9 @@
         "eclo/app": "^1.0",
         "minishlink/web-push": "^9.0",
         "php-mqtt/client": "^2.2",
-        "simps/mqtt": "^2.0"
+        "simps/mqtt": "^2.0",
+        "cboden/ratchet": "^0.4.4",
+        "catfan/medoo": "^2.2",
+        "predis/predis": "^3.0"
     }
 }

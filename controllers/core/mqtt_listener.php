@@ -1,14 +1,13 @@
 <?php
-// File: controllers/core/mqtt_listener.php
-// PHIÊN BẢN HOÀN CHỈNH - XỬ LÝ 2 TOPIC REC VÀ SNAP
 
 require __DIR__ . '/../../vendor/autoload.php';
 
 use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 use Medoo\Medoo;
+use Predis\Client as RedisClient; 
 
-// --- Bước 1, 2, 3: Giữ nguyên (Nạp thư viện, đọc .env, kết nối DB) ---
+
 $envPath = __DIR__ . '/../../.env';
 if (!file_exists($envPath)) {
     die("Lỗi: File .env không được tìm thấy tại: $envPath");
@@ -30,10 +29,24 @@ try {
 }
 echo "✅ Đã kết nối Database bằng Medoo thành công.\n";
 
+// --- Kết nối Redis (cho Pub/Sub) ---
+$redis = null;
+try {
+    $redis = new RedisClient([
+        'scheme' => 'tcp',
+        'host'   => $env['REDIS_HOST'] ?? '127.0.0.1',
+        'port'   => (int)($env['REDIS_PORT'] ?? 6379),
+    ]);
+    $redis->ping(); // Kiểm tra kết nối
+    echo "✅ Đã kết nối Redis thành công.\n";
+} catch (Exception $e) {
+    echo "⚠️ Không thể kết nối Redis: " . $e->getMessage() . ". Tiếp tục mà không có Redis Pub/Sub (real-time qua WebSocket sẽ không hoạt động).\n";
+    $redis = null;
+}
 
-// --- Bước 4: Cấu hình MQTT và chạy listener ---
+
 $server   = $env['MQTT_HOST'] ?? 'mqtt.ellm.io';
-$port     = (int)($env['MQTT_PORT'] ?? 1883);
+$port     = (int)($env['MQTT_PORT'] ?? 443);
 $clientId = 'eclo-listener-' . uniqid();
 $username = $env['MQTT_USERNAME'] ?? 'eclo';
 $password = $env['MQTT_PASSWORD'] ?? 'Eclo@123';
@@ -121,8 +134,6 @@ try {
                     'is_no_mask'    => (int)($info['isNoMask'] ?? 0),
                     'event_time'    => $info['time'],
                     'image_path'    => $imageRelativePath,
-                    // Các trường không có trong topic Snap sẽ tự động là NULL
-                    // person_name, person_id, similarity, person_type, verify_status
                 ]);
 
                 echo "💾 [SNAP] Đã lưu ảnh chụp nhanh vào database.\n";

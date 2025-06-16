@@ -768,3 +768,4 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
         // console.error('Lỗi đăng ký Service Worker:', error);
     });
 }
+

@@ -4,7 +4,6 @@ if (!defined('ECLO')) die("Hacking attempt");
 $jatbi = new Jatbi($app);
 $setting = $app->getValueData('setting');
 
-// --- ROUTE CHO DỮ LIỆU NHẬN DIỆN (REC) ---
 
 $app->router("/camera/rec", 'GET', function($vars) use ($app, $jatbi, $setting) {
     $vars['title'] = $jatbi->lang('Dữ liệu nhận diện');
