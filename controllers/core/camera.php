@@ -7,7 +7,7 @@ $setting = $app->getValueData('setting');
 
 $app->router("/camera/rec", 'GET', function($vars) use ($app, $jatbi, $setting) {
     $vars['title'] = $jatbi->lang('Dữ liệu nhận diện');
-    echo $app->render('templates/camera/rec.html', $vars);
+    echo $app->render('templates/camera/rec.html', $vars);  
 })->setPermissions(['rec']);
 
 $app->router("/camera/rec", 'POST', function($vars) use ($app, $jatbi) {
@@ -142,6 +142,7 @@ $app->router("/camera/snap", 'POST', function($vars) use ($app, $jatbi) {
         return [
             "id" => $data['id'],
             "image_path" => $imageHtml,
+            "person_name" => 'Người lạ',
             "record_id" => $data['record_id'],
             "event_time" => date('H:i:s d/m/Y', strtotime($data['event_time'])),
             "is_no_mask" => $data['is_no_mask'] ? '<span class="badge bg-danger">' . $jatbi->lang("Không khẩu trang") . '</span>' : '<span class="badge bg-success">' . $jatbi->lang("Có khẩu trang") . '</span>',        

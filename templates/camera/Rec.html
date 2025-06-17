@@ -13,40 +13,7 @@
         </div>
         <div class="filter-search">
             <div class="d-flex align-items-center justify-content-end">
-                <div class="dropdown">
-                    <button class="btn btn-primary-light fw-semibold border-0 rounded-pill small d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-                        <i class="ti ti-filter fs-5 me-2"></i> Điều kiện lọc
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-4 min-width bg-blur" style="--min-width: 300px">
-                        <div class="fw-semibold py-2 px-3">Điều kiện lọc</div>
-                        <hr class="border-secondary border-opacity-50 my-2" />
 
-                        <div class="px-3">
-                            <label class="form-label small mb-1">Từ ngày</label>
-                            <input type="date" name="date_from" class="form-control filter-name" />
-                        </div>
-                        <div class="px-3 mt-2">
-                            <label class="form-label small mb-1">Đến ngày</label>
-                            <input type="date" name="date_to" class="form-control filter-name" />
-                        </div>
-
-                        <div class="px-3 mt-3">
-                            <label class="form-label small mb-1">Loại đối tượng</label>
-                            <select name="person_type" class="form-select filter-name">
-                                <option value="">Tất cả</option>
-                                <option value="0">Người lạ</option>
-                                <option value="1">Nhân viên</option>
-                                <option value="2">Khách</option>
-                                <option value="3">Danh sách đen</option>
-                            </select>
-                        </div>
-                        <hr class="border-secondary border-opacity-50 my-2" />
-                        <div class="px-3 py-2 text-end w-100">
-                            <button type="button" class="btn btn-light px-3 py-2 rounded-pill reset-filter">Làm mới</button>
-                            <button type="button" class="btn btn-primary px-3 py-2 rounded-pill button-filter">Tìm</button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -59,20 +26,25 @@
 
     <div class="card bg-body bg-opacity-50 shadow border-0 rounded-4">
         <div class="card-body">
-            <table id="datatable" data-table class="table align-middle" data-type="POST" data-server="true" data-processing="true" data-page-length="10" data-searching="true" data-paging="true" data-state-save="false" style="width: 100%">
-                <thead>
-                    <tr>
-                        <th data-name="id" data-orderable="true" class="text-nowrap" data-class="text-center">ID</th>
-                        <th data-name="image_path" data-orderable="false" class="text-nowrap" data-class="text-center">Hình ảnh</th>
-                        <th data-name="person_name" data-orderable="true" class="text-nowrap">Tên đối tượng</th>
-                        <th data-name="person_id" data-orderable="true" class="text-nowrap">Mã đối tượng</th>
-                        <th data-name="similarity" data-orderable="true" class="text-nowrap">Độ tương đồng</th>
-                        <th data-name="event_time" data-orderable="true" class="text-nowrap">Thời gian</th>
-                        <th data-name="person_type" data-orderable="true" class="text-nowrap">Loại</th>
-                        <th data-name="is_no_mask" data-orderable="false" class="text-nowrap" data-class="text-center">Khẩu trang</th>
-                    </tr>
-                </thead>
-            </table>
+<table id="datatable" 
+       data-table
+       data-url="/camera/rec" 
+       data-server="true"
+       data-processing="true"
+       data-event-type="Rec">
+    <thead>
+        <tr>
+            <th data-name="id">ID</th>
+            <th data-name="image_path" data-orderable="false">Hình ảnh</th>
+            <th data-name="person_name">Tên đối tượng</th>
+            <th data-name="person_id">Mã đối tượng</th>
+            <th data-name="similarity">Độ tương đồng</th>
+            <th data-name="event_time">Thời gian</th>
+            <th data-name="person_type">Loại</th>
+            <th data-name="is_no_mask" data-orderable="false">Khẩu trang</th>
+        </tr>
+    </thead>
+</table>
         </div>
     </div>
 </div>

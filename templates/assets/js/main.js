@@ -250,149 +250,152 @@ function swal_error(text) {
     }
   });
 }
-function datatable(){
-  $('[data-table]').each(function () {
-    const $table = $(this);
-    const columns = $table.find('thead th').map(function () {
-        const $th = $(this);
-        return {
-            data: $th.attr('data-name') || null,
-            orderable: $th.attr('data-orderable') === "true",
-            visible: $th.attr('data-visible') !== "false",
-            className: $th.attr('data-class') || '',
-            render: function (data, type, row) {
-                if ($th.attr('data-name') === 'actions') {
-                    return $th.attr('data-render');
+// file: main.js
+
+$(document).ready(function() {
+
+    /**
+     * Hàm này sẽ tự động tìm và khởi tạo tất cả các bảng có thuộc tính [data-table]
+     */
+    function initializeDataTables() {
+        $('[data-table]').each(function () {
+            const $table = $(this);
+
+            // --- Tự động đọc cấu hình cột từ a <thead> ---
+            const columns = $table.find('thead th').map(function () {
+                const $th = $(this);
+                return {
+                    data: $th.attr('data-name') || null,
+                    orderable: $th.attr('data-orderable') !== "false",
+                    visible: $th.attr('data-visible') !== "false",
+                    className: $th.attr('data-class') || '',
+                };
+            }).get();
+
+            // --- Xây dựng các tùy chọn cho DataTable từ data-* attributes ---
+            const options = {
+                destroy: true, // Rất quan trọng: Chống lỗi "Cannot reinitialise" khi dùng PJAX
+                processing: $table.attr('data-processing') === "true",
+                serverSide: $table.attr('data-server') === "true",
+                responsive: true,
+                pageLength: parseInt($table.attr('data-page-length')) || 10,
+                searching: $table.attr('data-searching') === "true",
+                order: [[ 5, 'desc' ]], // Mặc định sắp xếp theo cột Thời gian (index 5)
+                
+                ajax: {
+                    url: $table.attr('data-url') || window.location.href, // Lấy URL từ data-url
+                    type: $table.attr('data-type') || 'POST',
+                    data: function(d) {
+                        // Logic này sẽ được ghi đè bởi bộ lọc bên dưới nếu có
+                        d._ = new Date().getTime(); // Chống cache
+                        return d;
+                    }
+                },
+                columns: columns,
+                
+                language: {
+                    "processing": "Đang xử lý...",
+                    "lengthMenu": "Hiển thị _MENU_ mục",
+                    "zeroRecords": "Không tìm thấy kết quả",
+                    "info": "Hiển thị _START_ đến _END_ trong tổng số _TOTAL_ mục",
+                    "infoEmpty": "Hiển thị 0 đến 0 trong tổng số 0 mục",
+                    "infoFiltered": "(được lọc từ _MAX_ mục)",
+                    "search": "Tìm kiếm:",
+                    "paginate": {
+                        "first": "Đầu",
+                        "last": "Cuối",
+                        "next": "Tiếp",
+                        "previous": "Trước"
+                    }
                 }
-                return data;
-            }
-        };
-    }).get();
-    const searchableColumns = columns
-        .map((col, index) => (col.visible ? index : null))
-        .filter(index => index !== null);
-    const options = {
-        ajax: {
-            url: $table.attr('data-url') || null,
-            type: $table.attr('data-type') || 'POST',
-            data: function(d) {
-                let searchParams = {};
-                return $.extend({}, d, searchParams);
-            }
-        },
-        columns: columns,
-        processing: $table.attr('data-processing') === "true",
-        serverSide:  $table.attr('data-server') === "true",
-        pageLength: parseInt($table.attr('data-page-length')) || 10,
-        searching: $table.attr('data-searching') === "true",
-        order: JSON.parse($table.attr('data-order') || '[]'),
-        lengthMenu: JSON.parse($table.attr('data-length-menu') || '[[10, 25, 50, 100, 200 , 500], ["10", "25", "50", "100", "200", "500"]]'),
-        paging: $table.attr('data-paging') !== "false",
-        language: JSON.parse($table.attr('data-lang') || '{"search": "","searchPlaceholder": "Nhập để tìm kiếm...","lengthMenu": "_MENU_", "info": "Hiển thị _START_ đến _END_ của tổng _TOTAL_", "infoEmpty":"Hiển thị 0 đến 0 của tổng 0","emptyTable": "Không tìm thấy dữ liệu"}'),
-        scrollX: $table.attr('data-scroll-x') || null,
-        scrollY: $table.attr('data-scroll-y') || null,
-        stateSave: $table.attr('data-state-save') || null,
-        dom: "<'row p-2 align-items-center g-2'<'col-md-6 col-lg-5 col-12 text-start order-2 order-md-1'f><'col-md-6 col-lg-7 col-12 order-1 order-md-2 text-end custom-buttons-display'>>" +
-             "<'row mb-4'<'col-md-12't>>" + 
-             "<'row mb-2 px-2 align-items-center justify-content-between'<'col-md-6 justify-content-start'p><'col-md-6 align-items-center justify-content-md-end d-flex'i l>>",
-        button: [],
-        initComplete: function () {
-            const $buttonSearch = $('.custom-buttons').clone(true);
-            $('.custom-buttons-display').html($buttonSearch.html());
-        }
-    };
-    if (!$.fn.dataTable.isDataTable($table)) {
-        var dataTableInstance = $table.DataTable(options);
-    } else {
-        var dataTableInstance = $table.DataTable();
-    }
-    $(document).off("click", ".button-filter").on("click", ".button-filter", function() {
-        let table = dataTableInstance;
-        let filterData = {};
-        let params = new URLSearchParams(window.location.search);
-        $(".filter-name").each(function() {
-            let $el = $(this);
-            let name = $el.attr("name");
-            let value = "";
-
-            if ($el.is("select") || $el.is("input")) {
-                value = $el.val();
-            } else if ($el.is("input[type='checkbox'], input[type='radio']")) {
-                if ($el.is(":checked")) {
-                    value = $el.val();
-                }
-            }
-            if (value !== "") {
-                filterData[name] = value;
-                params.set(name, value);
-            } else {
-                params.delete(name);
-            }
-        });
-        table.settings()[0].ajax.data = function(d) {
-            return $.extend({}, d, filterData);
-        };
-        history.pushState({}, "", "?" + params.toString());
-        table.ajax.reload();
-    });
-
-    // Reset bộ lọc
-    $(document).off("click", ".reset-filter").on("click", ".reset-filter", function() {
-        let table = dataTableInstance;
-        let params = new URLSearchParams(window.location.search);
-
-        $(".filter-name").each(function() {
-            $(this).val("").trigger("change");
-            params.delete($(this).attr("name"));
-        });
-
-        history.replaceState({}, "", window.location.pathname);
-        table.settings()[0].ajax.data = function (d) {
-            return d; // Không truyền filterData nữa
-        };
-        table.ajax.reload(null, false);
-    });
-    $(document).ready(function() {
-        let params = new URLSearchParams(window.location.search);
-        let filterData = {};
-        $(".filter-name").each(function() {
-            let $el = $(this);
-            let name = $el.attr("name");
-            if (params.has(name)) {
-                let value = params.get(name);
-                $el.val(value).trigger("change");
-                filterData[name] = value;
-            }
-        });
-        if (Object.keys(filterData).length > 0) {
-            dataTableInstance.settings()[0].ajax.data = function(d) {
-                return $.extend({}, d, filterData);
             };
-            dataTableInstance.ajax.reload();
-        }
-    });
-  });
-  $('[data-table]').on('show.bs.dropdown', '.dropdown', function () {
-        let $dropdownMenu = $(this).find('.dropdown-menu');
-        if (!$dropdownMenu.data('original-style')) {
-            $dropdownMenu.data('original-style', $dropdownMenu.attr('style') || '');
-        }
-        $('body').append($dropdownMenu.detach());
-        let newStyle = `${$dropdownMenu.data('original-style')}; display: block; position: absolute; top: ${$(this).offset().top + $(this).outerHeight()}px; left: ${$(this).offset().left}px;`;
 
-        $dropdownMenu.attr('style', newStyle);
-        $(this).data('dropdown-menu', $dropdownMenu);
+            // --- Khởi tạo DataTable ---
+            const dataTableInstance = $table.DataTable(options);
+
+            // =========================================================================
+            // == LOGIC REAL-TIME - Chỉ kích hoạt nếu có `data-event-type`        ==
+            // =========================================================================
+            const eventType = $table.attr('data-event-type');
+            if (eventType) {
+                const socket = io('http://localhost:3000');
+
+                socket.on('connect', () => {
+                    console.log(`✅ WebSocket đã kết nối. Trang này đang lắng nghe sự kiện cho: ${eventType}`);
+                });
+
+                // Xác định đúng tên sự kiện để lắng nghe
+                const eventName = (eventType === 'Rec') ? 'new_rec_event' : 'new_snap_event';
+                
+                socket.on(eventName, (data) => {
+                    console.log(`Nhận được sự kiện ${eventName}:`, data);
+                    // Thêm hàng mới vào bảng đã được khởi tạo
+                    dataTableInstance.row.add(data).draw(false);
+                });
+
+                socket.on('connect_error', (err) => {
+                    console.error('❌ Lỗi kết nối WebSocket:', err.message);
+                });
+            }
+        });
+    }
+
+    /**
+     * Hàm này xử lý các sự kiện click cho bộ lọc, áp dụng cho toàn trang
+     */
+    function initializeFilterHandlers() {
+        // Dùng event delegation của jQuery để chỉ gán sự kiện một lần
+        $(document).off('click.dtFilter').on('click.dtFilter', '.button-filter', function() {
+            const $datatable = $('[data-table]').first(); // Giả sử chỉ có 1 datatable trên trang có filter
+            if ($.fn.dataTable.isDataTable($datatable)) {
+                const dataTableInstance = $datatable.DataTable();
+                let filterData = {};
+
+                $(".filter-name").each(function() {
+                    const name = $(this).attr("name");
+                    const value = $(this).val();
+                    if (value !== "") {
+                        filterData[name] = value;
+                    }
+                });
+
+                // Ghi đè hàm data của ajax để gửi đi bộ lọc
+                dataTableInstance.settings()[0].ajax.data = function(d) {
+                    d._ = new Date().getTime(); // Chống cache
+                    return $.extend({}, d, filterData);
+                };
+                dataTableInstance.ajax.reload();
+            }
+        });
+
+        $(document).off('click.dtReset').on('click.dtReset', '.reset-filter', function() {
+            const $datatable = $('[data-table]').first();
+             if ($.fn.dataTable.isDataTable($datatable)) {
+                const dataTableInstance = $datatable.DataTable();
+                $(".filter-name").val("").trigger("change");
+                
+                // Trả lại hàm data gốc
+                dataTableInstance.settings()[0].ajax.data = function(d) { 
+                    d._ = new Date().getTime();
+                    return d; 
+                };
+                dataTableInstance.ajax.reload();
+            }
+        });
+    }
+
+    // --- Chạy các hàm khởi tạo ---
+    initializeDataTables();
+    initializeFilterHandlers();
+
+    // Nếu bạn dùng PJAX, bạn cần gọi lại các hàm này sau khi PJAX load xong
+    // Ví dụ với pjax:success
+    $(document).on('pjax:success', function() {
+        initializeDataTables();
+        initializeFilterHandlers();
     });
 
-    $('[data-table]').on('hidden.bs.dropdown', '.dropdown', function () {
-        let $dropdownMenu = $(this).data('dropdown-menu');
-        if ($dropdownMenu) {
-            $(this).append($dropdownMenu.detach());
-            $dropdownMenu.attr('style', $dropdownMenu.data('original-style'));
-            $(this).removeData('dropdown-menu');
-        }
-    });
-}
+});
 function selected(){
   $(function () {
       $('[data-select]').selectpicker();
